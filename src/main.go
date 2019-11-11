@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 
 	"github.com/mitchellh/go-homedir"
 )
@@ -28,6 +29,32 @@ func main() {
 	os.Exit(mainReturnWithCode())
 }
 
+var repoExp = regexp.MustCompile(`(?P<User>\w+)\/(?P<Name>\w+)\/(?P<Branch>[\w\/]+)(@(?P<Tag>[\w\.]+))?`)
+
+func getRepo(configString string) Repo {
+	match := repoExp.FindStringSubmatch(configString)
+	result := make(map[string]string)
+
+	for i, name := range repoExp.SubexpNames() {
+		if i != 0 && name != "" {
+			result[name] = match[i]
+		}
+	}
+
+	var tag string = ""
+
+	if val, ok := result["Tag"]; ok {
+		tag = val
+	}
+
+	return Repo{
+		User:   result["User"],
+		Name:   result["Name"],
+		Branch: result["Branch"],
+		Tag:    tag,
+	}
+}
+
 func mainReturnWithCode() int {
 	args := os.Args[1:]
 
@@ -40,6 +67,8 @@ func mainReturnWithCode() int {
 	repoFile := path.Join(home, "./.sane/repos.json")
 	repos, err := os.Open(repoFile)
 
+	var cfgStruct SaneConfig
+
 	if err != nil {
 		os.Mkdir(path.Join(home, "./.sane/"), os.ModePerm)
 
@@ -49,7 +78,6 @@ func mainReturnWithCode() int {
 			log.Fatal(err)
 		}
 
-		var cfgStruct SaneConfig
 		cfg, err := json.Marshal(&cfgStruct)
 
 		_, err = f.Write(cfg)
@@ -68,7 +96,30 @@ func mainReturnWithCode() int {
 	if err != nil {
 		fmt.Println("File not found!")
 	} else {
-		fmt.Println(b)
+		json.Unmarshal(b, &cfgStruct)
+	}
+
+	fmt.Println(cfgStruct)
+
+	helpStr := `
+sane - A package manager for sane configuration
+https://github.com/Azer0s/sane
+
+Flags:
+  -v --version		Displays the program version string.
+  -h --help   		Displays the help page.
+  
+Commands:
+  start <config>	Starts a docker container with the specified config.
+  stop <config>		Stops a docker container with the specified config.
+  list        		Lists available configs.
+  apply <config>	Applies a configuration to the home directory.
+  remove <config>	Removes a configuration from the home directory.
+`
+
+	if len(args) < 2 {
+		fmt.Println(helpStr)
+		return 1
 	}
 
 	command := args[0]
@@ -78,6 +129,8 @@ func mainReturnWithCode() int {
 		fmt.Println("Start")
 
 	case "list":
+
+	case "apply":
 
 	}
 
