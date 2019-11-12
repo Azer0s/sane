@@ -109,21 +109,18 @@ func getTopicsForRepo(user, name string) []string {
 //Pull a repo from Gh
 func Pull(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfig {
 	var cmd = exec.Command("git", "clone", "https://github.com/"+repo.User+"/"+repo.Name+".git")
-	var target = "./" + repo.User + "_" + repo.Name
 
 	if repo.Tag != "" {
-		target += "_" + repo.Tag
 		cmd.Args = append(cmd.Args, "--branch")
 		cmd.Args = append(cmd.Args, repo.Tag)
 	} else {
 		if repo.Branch != "" {
-			target += "_" + repo.Branch
 			cmd.Args = append(cmd.Args, "--branch")
 			cmd.Args = append(cmd.Args, repo.Branch)
 		}
 	}
 
-	target = path.Join(home, target)
+	target := path.Join(home, GetFolder(repo))
 
 	if _, err := os.Stat(target); !os.IsNotExist(err) {
 		cfg = Purge(repo, home, cfg)
@@ -147,9 +144,9 @@ func Pull(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfi
 	return cfg
 }
 
-//Purge a repo
-func Purge(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfig {
-	var target = "./" + repo.User + "_" + repo.Name
+//GetFolder get the folder of a config
+func GetFolder(repo config.Repo) string {
+	target := "./" + repo.User + "_" + repo.Name
 
 	if repo.Tag != "" {
 		target += "_" + repo.Tag
@@ -159,7 +156,12 @@ func Purge(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConf
 		}
 	}
 
-	target = path.Join(home, target)
+	return target
+}
+
+//Purge a repo
+func Purge(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfig {
+	target := path.Join(home, GetFolder(repo))
 
 	fmt.Println("🗑  Purging repo...")
 	exec.Command("rm", "-rf", target).Run()

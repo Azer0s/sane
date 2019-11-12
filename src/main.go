@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
+	"regexp"
 	"sort"
 
 	config "./config"
@@ -38,10 +40,20 @@ Commands:
 `
 
 func main() {
-	os.Exit(mainReturnWithCode())
-}
+	err := exec.Command("docker", "-v").Run()
 
-func mainReturnWithCode() int {
+	if err != nil {
+		fmt.Println("🐳❌  Docker not installed!")
+		os.Exit(1)
+	}
+
+	err = exec.Command("docker", "info").Run()
+
+	if err != nil {
+		fmt.Println("👻❌  Docker not reachable. Is the docker deamon running?")
+		os.Exit(1)
+	}
+
 	args := os.Args[1:]
 	cfg := config.Read()
 
@@ -57,7 +69,7 @@ func mainReturnWithCode() int {
 		fmt.Println("Expected at least one argument!")
 		fmt.Println()
 		fmt.Println(helpStr)
-		return 1
+		os.Exit(1)
 	}
 
 	command := args[0]
@@ -104,10 +116,21 @@ func mainReturnWithCode() int {
 			}
 		}
 
-		return 0
+		os.Exit(0)
 	}
 
-	repo := repos.GetRepoFromString(args[1])
+	var repo config.Repo
+
+	if regexp.MustCompile(`^\w+`).MatchString(args[1]) {
+		if val, ok := cfg.Aliases[args[1]]; ok {
+			repo = repos.GetRepoFromString(val)
+		} else {
+			fmt.Println("🤫❌  Alias " + args[1] + " not found!")
+		}
+		os.Exit(0)
+	}
+
+	repo = repos.GetRepoFromString(args[1])
 
 	switch command {
 	case "get":
@@ -141,5 +164,5 @@ func mainReturnWithCode() int {
 		config.Write(cfg)
 	}
 
-	return 0
+	os.Exit(0)
 }
