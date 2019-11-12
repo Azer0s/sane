@@ -37,6 +37,7 @@ Commands:
   list        		Lists available configs.
   aliases       	Lists all aliases.
   alias <config> <name>	Alias a config.
+  dealias        	Remove all aliases.
   dealias <config>	Remove alias from a config.
 `
 
@@ -112,6 +113,10 @@ func main() {
 			for k, v := range cfg.Aliases {
 				fmt.Println("🎭  " + k + " => " + v)
 			}
+
+		case "dealias":
+			cfg.Aliases = make(map[string]string)
+			config.Write(cfg)
 		}
 
 		os.Exit(0)
@@ -139,17 +144,16 @@ func main() {
 		fmt.Println("😬  Config succesfully removed!")
 		config.Write(cfg)
 	case "start":
-		if !config.Contains(cfg.Repos, repo) {
-			fmt.Println("🤷‍  Config missing, pulling automatically...")
-			cfg = repos.Pull(repo, home, cfg)
-		}
-
+		cfg = repos.AutoPull(cfg, repo, home)
 		fmt.Println("🚀  Starting " + args[1] + "...")
 		launch.StartContainerOrCompose(repo, home)
 	case "stop":
 		fmt.Println("✋  Stopping...")
+		//TODO: Stop containers, one can only stop containers
 	case "apply":
-		fmt.Println("✍️  Writing config... ")
+		cfg = repos.AutoPull(cfg, repo, home)
+		fmt.Println("✍️  ​Applying config " + args[1] + "...")
+		launch.ApplyConfigOrAliases(repo, home, cfg)
 	case "remove":
 		fmt.Println("💣  Removing config... ")
 	case "alias":

@@ -163,12 +163,22 @@ func GetFolder(repo config.Repo) string {
 func Purge(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfig {
 	target := path.Join(home, GetFolder(repo))
 
-	fmt.Println("🗑  Purging repo...")
+	fmt.Println("🗑  ​Purging repo...")
 	exec.Command("rm", "-rf", target).Run()
 
 	if config.Contains(cfg.Repos, repo) {
 		i := config.IndexOf(cfg.Repos, repo)
 		cfg.Repos = append(cfg.Repos[:i], cfg.Repos[i+1:]...)
+	}
+
+	return cfg
+}
+
+//AutoPull pulls if not exists
+func AutoPull(cfg config.SaneConfig, repo config.Repo, home string) config.SaneConfig {
+	if !config.Contains(cfg.Repos, repo) {
+		fmt.Println("🤷‍  Config missing, pulling automatically...")
+		cfg = Pull(repo, home, cfg)
 	}
 
 	return cfg
