@@ -61,21 +61,23 @@ func Mapkeys(m map[string]string, value string) []string {
 //Read the config
 func Read() SaneConfig {
 	home, err := homedir.Dir()
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	repoFile := path.Join(home, "./.sane/config.json")
-	repos, err := os.Open(repoFile)
-	defer repos.Close()
 
 	var cfgStruct SaneConfig
-	b, err := ioutil.ReadAll(repos)
-	err = json.Unmarshal(b, &cfgStruct)
 
+	b, err := ioutil.ReadFile(repoFile)
 	if err != nil {
 		fmt.Println("📭  Config file doesn't exist!")
+		os.Exit(1)
+	}
+
+	err = json.Unmarshal(b, &cfgStruct)
+	if err != nil {
+		fmt.Println("😕  Invalid config file!")
 		os.Exit(1)
 	}
 
@@ -96,17 +98,12 @@ func Write(config SaneConfig) {
 	f, _ := os.Create(repoFile)
 	f.Close()
 
-	repos, err := os.OpenFile(repoFile, os.O_RDWR, os.ModePerm)
-	defer repos.Close()
-
 	b, err := json.Marshal(config)
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, err = repos.Write(b)
-
+	err = ioutil.WriteFile(repoFile, b, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}

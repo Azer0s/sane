@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"sort"
 
 	config "./config"
+	launch "./launch"
 	repos "./repo"
 
 	"github.com/mitchellh/go-homedir"
@@ -35,22 +35,27 @@ Commands:
   remove <config>	Removes a configuration from the home directory.
 
   list        		Lists available configs.
+  aliases       	Lists all aliases.
   alias <config> <name>	Alias a config.
   dealias <config>	Remove alias from a config.
 `
 
 func main() {
 	err := exec.Command("docker", "-v").Run()
-
 	if err != nil {
 		fmt.Println("🐳❌  Docker not installed!")
 		os.Exit(1)
 	}
 
 	err = exec.Command("docker", "info").Run()
-
 	if err != nil {
 		fmt.Println("👻❌  Docker not reachable. Is the docker deamon running?")
+		os.Exit(1)
+	}
+
+	err = exec.Command("docker-compose", "version").Run()
+	if err != nil {
+		fmt.Println("👷‍❌  Docker-compose not installed!")
 		os.Exit(1)
 	}
 
@@ -93,7 +98,7 @@ func main() {
 						branch = "@" + repo.Tag
 					}
 				} else {
-					branch = "@" + repo.Branch
+					branch = "/" + repo.Branch
 				}
 
 				if len(topics) != 0 {
@@ -103,16 +108,9 @@ func main() {
 				fmt.Println("⚡️ " + repo.User + "/" + repo.Name + branch + topics)
 			}
 
-		case "list-topics":
-			keys := make([]string, 0, len(repos.TopicMap))
-			for k := range repos.TopicMap {
-				keys = append(keys, k)
-			}
-
-			sort.Strings(keys)
-
-			for _, k := range keys {
-				fmt.Println(k + " => " + repos.TopicMap[k])
+		case "aliases":
+			for k, v := range cfg.Aliases {
+				fmt.Println("🎭  " + k + " => " + v)
 			}
 		}
 
@@ -121,16 +119,16 @@ func main() {
 
 	var repo config.Repo
 
-	if regexp.MustCompile(`^\w+`).MatchString(args[1]) {
+	if regexp.MustCompile(`^\w+$`).MatchString(args[1]) {
 		if val, ok := cfg.Aliases[args[1]]; ok {
 			repo = repos.GetRepoFromString(val)
 		} else {
-			fmt.Println("🤫❌  Alias " + args[1] + " not found!")
+			fmt.Println("🤫 ❌  Alias " + args[1] + " not found!")
+			os.Exit(1)
 		}
-		os.Exit(0)
+	} else {
+		repo = repos.GetRepoFromString(args[1])
 	}
-
-	repo = repos.GetRepoFromString(args[1])
 
 	switch command {
 	case "get":
@@ -141,7 +139,13 @@ func main() {
 		fmt.Println("😬  Config succesfully removed!")
 		config.Write(cfg)
 	case "start":
-		fmt.Println("🚀  Starting...")
+		if !config.Contains(cfg.Repos, repo) {
+			fmt.Println("🤷‍  Config missing, pulling automatically...")
+			cfg = repos.Pull(repo, home, cfg)
+		}
+
+		fmt.Println("🚀  Starting " + args[1] + "...")
+		launch.StartContainerOrCompose(repo, home)
 	case "stop":
 		fmt.Println("✋  Stopping...")
 	case "apply":
