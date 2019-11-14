@@ -34,7 +34,7 @@ var TopicMap = map[string]string{
 	"json":      "J👶",
 }
 
-var repoExp = regexp.MustCompile(`^(?P<User>\w+)\/(?P<Name>\w+)((\/(?P<Branch>[\w\/]+))?|(@(?P<Tag>[\w\.]+))?)$`)
+var repoExp = regexp.MustCompile(`^(?P<User>\w+)\/(?P<Name>\w+)((\/(?P<Branch>[\w\/\-_]+))?|(@(?P<Tag>[\w\.]+))?)$`)
 
 //GetRepoFromString get repo config from string
 func GetRepoFromString(configString string) config.Repo {

@@ -124,7 +124,7 @@ func main() {
 
 	var repo config.Repo
 
-	if regexp.MustCompile(`^\w+$`).MatchString(args[1]) {
+	if regexp.MustCompile(`^[\w-]+$`).MatchString(args[1]) {
 		if val, ok := cfg.Aliases[args[1]]; ok {
 			repo = repos.GetRepoFromString(val)
 		} else {
@@ -146,14 +146,14 @@ func main() {
 	case "start":
 		cfg = repos.AutoPull(cfg, repo, home)
 		fmt.Println("🚀  Starting " + args[1] + "...")
-		launch.StartContainerOrCompose(repo, home)
+		launch.Start(repo, home)
 	case "stop":
 		fmt.Println("✋  Stopping...")
 		//TODO: Stop containers, one can only stop containers
 	case "apply":
 		cfg = repos.AutoPull(cfg, repo, home)
-		fmt.Println("✍️  ​Applying config " + args[1] + "...")
-		launch.ApplyConfigOrAliases(repo, home, cfg)
+		fmt.Println("✍️  ​​Applying config " + args[1] + "...")
+		launch.Apply(repo, home, cfg)
 	case "remove":
 		fmt.Println("💣  Removing config... ")
 	case "alias":
