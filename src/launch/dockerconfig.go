@@ -10,6 +10,7 @@ type DockerConfig struct {
 	Environment []EnvironmentPair
 	Image       string
 	Start       int
+	Stop        int
 }
 
 type EnvironmentPair struct {

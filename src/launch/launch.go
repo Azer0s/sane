@@ -60,46 +60,78 @@ func startDockerCompose(m map[string]interface{}, repo config.Repo, home string)
 	}
 }
 
-func startDocker(m map[string]interface{}, repo config.Repo, home string) {
+func startDocker(m map[string]interface{}) {
 	configs := extractDockerConfig(m)
+
+	started := make([]DockerConfig, 0)
 
 	sort.SliceStable(configs, func(i, j int) bool {
 		return configs[i].Start < configs[j].Start
 	})
 
 	for _, dockerConfig := range configs {
-		command := "docker run"
+		cmd := exec.Command("docker", "run")
 
 		if dockerConfig.Deamon {
-			command += " -d"
+			cmd.Args = append(cmd.Args, "-d")
 		}
 
-		command += " --name " + dockerConfig.Name
+		cmd.Args = append(cmd.Args, "--name")
+		cmd.Args = append(cmd.Args, dockerConfig.Name)
 
 		if dockerConfig.Net != "" {
-			command += " --net " + dockerConfig.Net
+			cmd.Args = append(cmd.Args, "--net")
+			cmd.Args = append(cmd.Args, dockerConfig.Net)
 		}
 
 		if dockerConfig.Ipc != "" {
-			command += " --ipc " + dockerConfig.Ipc
+			cmd.Args = append(cmd.Args, "--ipc")
+			cmd.Args = append(cmd.Args, dockerConfig.Ipc)
 		}
 
 		if dockerConfig.Pid != "" {
-			command += " --pid " + dockerConfig.Pid
+			cmd.Args = append(cmd.Args, "--pid")
+			cmd.Args = append(cmd.Args, dockerConfig.Pid)
 		}
 
 		for _, port := range dockerConfig.Ports {
-			command += " -p " + strconv.Itoa(port.Source) + ":" + strconv.Itoa(port.Target)
+			cmd.Args = append(cmd.Args, "-p")
+			cmd.Args = append(cmd.Args, strconv.Itoa(port.Source)+":"+strconv.Itoa(port.Target))
 		}
 
 		for _, env := range dockerConfig.Environment {
-			command += " --env \"" + env.Key + "=" + env.Value + "\""
+			cmd.Args = append(cmd.Args, "--env")
+			cmd.Args = append(cmd.Args, "\""+env.Key+"="+env.Value+"\"")
 		}
 
-		command += " " + dockerConfig.Image
+		cmd.Args = append(cmd.Args, dockerConfig.Image)
 
-		//TODO: Run command, add stop command
-		fmt.Println(command)
+		fmt.Println("🐳  Starting container '" + dockerConfig.Name + "'...")
+		err := cmd.Run()
+
+		if err != nil {
+			fmt.Println("❌  There was an error while starting the container! Rolling back...")
+			for _, s := range started {
+				exec.Command("docker", "stop", s.Name).Run()
+				exec.Command("docker", "rm", s.Name).Run()
+			}
+			os.Exit(1)
+		}
+
+		started = append(started, dockerConfig)
+	}
+}
+
+func stopDocker(m map[string]interface{}) {
+	configs := extractDockerConfig(m)
+
+	sort.SliceStable(configs, func(i, j int) bool {
+		return configs[i].Stop < configs[j].Stop
+	})
+
+	for _, dockerConfig := range configs {
+		exec.Command("docker", "stop", dockerConfig.Name).Run()
+		exec.Command("docker", "rm", dockerConfig.Name).Run()
 	}
 }
 
@@ -114,6 +146,7 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 			Ports:       make([]PortMapping, 0),
 			Environment: make([]EnvironmentPair, 0),
 			Start:       math.MaxInt32,
+			Stop:        math.MaxInt32,
 		}
 
 		if deamon, ok := vals["deamon"]; ok {
@@ -140,6 +173,10 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 
 		if start, ok := vals["start"]; ok {
 			cfg.Start = start.(int)
+		}
+
+		if stop, ok := vals["stop"]; ok {
+			cfg.Stop = stop.(int)
 		}
 
 		if env, ok := vals["environment"]; ok {
@@ -194,11 +231,36 @@ func Start(repo config.Repo, home string) {
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
 		case "docker":
-			startDocker(m, repo, home)
+			startDocker(m)
 		case "docker-compose":
 			startDockerCompose(m, repo, home)
 		default:
 			fmt.Println("❌  Unsupported start mode \"" + val.(string) + "\"!")
+			os.Exit(1)
+		}
+	} else {
+		fmt.Println("❌  Config mode not set!")
+		os.Exit(1)
+	}
+}
+
+//Stop start a container or a docker compose file
+func Stop(repo config.Repo, home string) {
+	target := hasSaneYml(repo, home)
+	b, _ := ioutil.ReadFile(target)
+	m := make(map[string]interface{})
+	err := yaml.Unmarshal(b, &m)
+
+	if err != nil {
+		couldntParse("")
+	}
+
+	if val, ok := m["mode"]; ok {
+		switch val.(string) {
+		case "docker":
+			stopDocker(m)
+		default:
+			fmt.Println("❌  Unsupported stop mode \"" + val.(string) + "\"!")
 			os.Exit(1)
 		}
 	} else {
