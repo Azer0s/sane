@@ -130,8 +130,14 @@ func stopDocker(m map[string]interface{}) {
 	})
 
 	for _, dockerConfig := range configs {
-		exec.Command("docker", "stop", dockerConfig.Name).Run()
-		exec.Command("docker", "rm", dockerConfig.Name).Run()
+		fmt.Println("🐳  Stopping container '" + dockerConfig.Name + "'...")
+		err1 := exec.Command("docker", "stop", dockerConfig.Name).Run()
+		err2 := exec.Command("docker", "rm", dockerConfig.Name).Run()
+
+		if err1 != nil || err2 != nil {
+			fmt.Println("❌  There was an error while stopping the container!")
+			os.Exit(1)
+		}
 	}
 }
 
