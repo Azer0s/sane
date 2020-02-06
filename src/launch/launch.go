@@ -3,11 +3,14 @@ package launch
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
+	"sort"
 	"strconv"
+	"strings"
 
 	config "../config"
 	repos "../repo"
@@ -23,6 +26,11 @@ func hasSaneYml(repo config.Repo, home string) string {
 	}
 
 	return target
+}
+
+func couldntParse(info string) {
+	fmt.Println("❌  Couldn't parse config! " + info)
+	os.Exit(1)
 }
 
 func startDockerCompose(m map[string]interface{}, repo config.Repo, home string) {
@@ -53,7 +61,123 @@ func startDockerCompose(m map[string]interface{}, repo config.Repo, home string)
 }
 
 func startDocker(m map[string]interface{}, repo config.Repo, home string) {
-	//TODO
+	configs := extractDockerConfig(m)
+
+	sort.SliceStable(configs, func(i, j int) bool {
+		return configs[i].Start < configs[j].Start
+	})
+
+	for _, dockerConfig := range configs {
+		command := "docker run"
+
+		if dockerConfig.Deamon {
+			command += " -d"
+		}
+
+		command += " --name " + dockerConfig.Name
+
+		if dockerConfig.Net != "" {
+			command += " --net " + dockerConfig.Net
+		}
+
+		if dockerConfig.Ipc != "" {
+			command += " --ipc " + dockerConfig.Ipc
+		}
+
+		if dockerConfig.Pid != "" {
+			command += " --pid " + dockerConfig.Pid
+		}
+
+		for _, port := range dockerConfig.Ports {
+			command += " -p " + strconv.Itoa(port.Source) + ":" + strconv.Itoa(port.Target)
+		}
+
+		for _, env := range dockerConfig.Environment {
+			command += " --env \"" + env.Key + "=" + env.Value + "\""
+		}
+
+		command += " " + dockerConfig.Image
+
+		//TODO: Run command, add stop command
+		fmt.Println(command)
+	}
+}
+
+func extractDockerConfig(m map[string]interface{}) []DockerConfig {
+	dockerConfigs := make([]DockerConfig, 0)
+	configs := m["containers"].(map[interface{}]interface{})
+
+	for k, v := range configs {
+		vals := v.(map[interface{}]interface{})
+		cfg := DockerConfig{
+			Name:        k.(string),
+			Ports:       make([]PortMapping, 0),
+			Environment: make([]EnvironmentPair, 0),
+			Start:       math.MaxInt32,
+		}
+
+		if deamon, ok := vals["deamon"]; ok {
+			cfg.Deamon = deamon.(bool)
+		}
+
+		if net, ok := vals["net"]; ok {
+			cfg.Net = net.(string)
+		}
+
+		if ipc, ok := vals["ipc"]; ok {
+			cfg.Ipc = ipc.(string)
+		}
+
+		if pid, ok := vals["pid"]; ok {
+			cfg.Pid = pid.(string)
+		}
+
+		if image, ok := vals["image"]; ok {
+			cfg.Image = image.(string)
+		} else {
+			couldntParse("Image not specified (" + cfg.Name + ")!")
+		}
+
+		if start, ok := vals["start"]; ok {
+			cfg.Start = start.(int)
+		}
+
+		if env, ok := vals["environment"]; ok {
+			for _, e := range env.([]interface{}) {
+				for envK, envV := range e.(map[interface{}]interface{}) {
+					cfg.Environment = append(cfg.Environment, EnvironmentPair{
+						Key:   fmt.Sprintf("%v", envK),
+						Value: fmt.Sprintf("%v", envV),
+					})
+				}
+			}
+		}
+
+		if port, ok := vals["ports"]; ok {
+			for _, v := range port.([]interface{}) {
+				ports := strings.Split(v.(string), ":")
+				source, err := strconv.Atoi(ports[0])
+				if err != nil {
+					couldntParse("")
+				}
+
+				target, err := strconv.Atoi(ports[1])
+
+				if err != nil {
+					couldntParse("")
+				}
+
+				cfg.Ports = append(cfg.Ports, PortMapping{
+					Source: source,
+					Target: target,
+				})
+			}
+		}
+
+		dockerConfigs = append(dockerConfigs, cfg)
+	}
+
+	return dockerConfigs
 }
 
 //Start start a container or a docker compose file
@@ -61,7 +185,11 @@ func Start(repo config.Repo, home string) {
 	target := hasSaneYml(repo, home)
 	b, _ := ioutil.ReadFile(target)
 	m := make(map[string]interface{})
-	yaml.Unmarshal(b, &m)
+	err := yaml.Unmarshal(b, &m)
+
+	if err != nil {
+		couldntParse("")
+	}
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
@@ -125,7 +253,11 @@ func Apply(repo config.Repo, home string, cfg config.SaneConfig) {
 	b, _ := ioutil.ReadFile(target)
 	m := make(map[string]interface{})
 
-	yaml.Unmarshal(b, &m)
+	err := yaml.Unmarshal(b, &m)
+
+	if err != nil {
+		couldntParse("")
+	}
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {

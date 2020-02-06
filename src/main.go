@@ -152,7 +152,7 @@ func main() {
 		//TODO: Stop containers, one can only stop containers
 	case "apply":
 		cfg = repos.AutoPull(cfg, repo, home)
-		fmt.Println("✍️  ​​Applying config " + args[1] + "...")
+		fmt.Println("✍️  ​Applying config " + args[1] + "...")
 		launch.Apply(repo, home, cfg)
 	case "remove":
 		fmt.Println("💣  Removing config... ")
