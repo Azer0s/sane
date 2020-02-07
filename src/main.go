@@ -28,16 +28,17 @@ Commands:
   get <config>  	Pull a config from GitHub.
   purge <config>	Purge a pulled config from disk.
 
-  start <config>	Starts a docker container with the specified config.
-  stop <config>		Stops a docker container with the specified config.
+  start <config>	Starts an application specified by a sanefile.
+  stop <config>		Stops an application specified by a sanefile.
 
-  apply <config>	Applies a configuration to the home directory.
-  remove <config>	Removes a configuration from the home directory.
+  apply <config>	Applies a configuration specified by a sanefile.
+  remove <config>	Removes a configuration specified by a sanefile.
+  backup <config> <ext> Backs up config files by copying and appending an extension.
 
   list        		Lists available configs.
   aliases       	Lists all aliases.
   alias <config> <name>	Alias a config.
-  dealias        	Remove all aliases.
+  rmaliases        	Remove all aliases.
   dealias <config>	Remove alias from a config.
 `
 
@@ -114,9 +115,14 @@ func main() {
 				fmt.Println("🎭  " + k + " => " + v)
 			}
 
-		case "dealias":
+		case "rmaliases":
 			cfg.Aliases = make(map[string]string)
 			config.Write(cfg)
+
+		default:
+			fmt.Println("🤷 ❌ Command unrecognized!‍")
+			fmt.Println(helpStr)
+			os.Exit(1)
 		}
 
 		os.Exit(0)
@@ -156,6 +162,8 @@ func main() {
 		launch.Apply(repo, home, cfg)
 	case "remove":
 		fmt.Println("💣  Removing config... ")
+	case "backup":
+		fmt.Println("🔏️  Backing up config " + args[1] + "...")
 	case "alias":
 		fmt.Println("🤫  Aliasing " + args[1] + " to " + args[2])
 		cfg.Aliases[args[2]] = args[1]

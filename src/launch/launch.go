@@ -101,7 +101,12 @@ func startDocker(m map[string]interface{}) {
 
 		for _, env := range dockerConfig.Environment {
 			cmd.Args = append(cmd.Args, "--env")
-			cmd.Args = append(cmd.Args, "\""+env.Key+"="+env.Value+"\"")
+
+			if strings.Contains(env.Value, " ") {
+				env.Value = "\"" + env.Value + "\""
+			}
+
+			cmd.Args = append(cmd.Args, env.Key+"="+env.Value)
 		}
 
 		cmd.Args = append(cmd.Args, dockerConfig.Image)
