@@ -353,7 +353,7 @@ func applyAliases(m map[string]interface{}, cfg config.SaneConfig) {
 func removeAliases(m map[string]interface{}, cfg config.SaneConfig) {
 	if aliases, ok := m["aliases"]; ok {
 		for _, v := range aliases.([]interface{}) {
-			for k, _ := range v.(map[interface{}]interface{}) {
+			for k := range v.(map[interface{}]interface{}) {
 				delete(cfg.Aliases, k.(string))
 			}
 		}

@@ -91,7 +91,7 @@ type GhResult struct {
 func getTopicsForRepo(user, name string) []string {
 	client := &http.Client{}
 	url := "https://api.github.com/repos/" + user + "/" + name + "/topics"
-	req, err := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Accept", "application/vnd.github.mercy-preview+json")
 
 	resp, err := client.Do(req)
@@ -99,7 +99,7 @@ func getTopicsForRepo(user, name string) []string {
 		log.Fatal(err)
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, _ := ioutil.ReadAll(resp.Body)
 	var ghResultStruct GhResult
 	json.Unmarshal(b, &ghResultStruct)
 

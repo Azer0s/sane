@@ -146,7 +146,7 @@ func main() {
 		fmt.Println("😊  New config ready to use!")
 	case "purge":
 		cfg = repos.Purge(repo, home, cfg)
-		fmt.Println("😬  Config succesfully removed!")
+		fmt.Println("😬  Config successfully removed!")
 		config.Write(cfg)
 	case "start":
 		cfg = repos.AutoPull(cfg, repo, home)
