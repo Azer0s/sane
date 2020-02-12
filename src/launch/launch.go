@@ -353,7 +353,7 @@ func applyAliases(m map[string]interface{}, cfg config.SaneConfig) {
 func removeAliases(m map[string]interface{}, cfg config.SaneConfig) {
 	if aliases, ok := m["aliases"]; ok {
 		for _, v := range aliases.([]interface{}) {
-			for k, _ := range v.(map[interface{}]interface{}) {
+			for k := range v.(map[interface{}]interface{}) {
 				delete(cfg.Aliases, k.(string))
 			}
 		}
@@ -363,6 +363,22 @@ func removeAliases(m map[string]interface{}, cfg config.SaneConfig) {
 	} else {
 		fmt.Println("❌  Aliases not found!")
 		os.Exit(1)
+	}
+}
+
+func doConfig(mode string, m map[string]interface{}, repo config.Repo, home string) {
+	if mode == config.APPLY {
+		applyConfig(m, repo, home)
+	} else {
+		removeConfig(m)
+	}
+}
+
+func doAliases(mode string, m map[string]interface{}, cfg config.SaneConfig) {
+	if mode == config.APPLY {
+		applyAliases(m, cfg)
+	} else {
+		removeAliases(m, cfg)
 	}
 }
 
@@ -381,17 +397,9 @@ func Do(repo config.Repo, home string, cfg config.SaneConfig, mode string) {
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
 		case "config":
-			if mode == "apply" {
-				applyConfig(m, repo, home)
-			} else {
-				removeConfig(m)
-			}
+			doConfig(mode, m, repo, home)
 		case "aliases":
-			if mode == "apply" {
-				applyAliases(m, cfg)
-			} else {
-				removeAliases(m, cfg)
-			}
+			doAliases(mode, m, cfg)
 		default:
 			fmt.Println("❌  Unsupported start mode \"" + val.(string) + "\"!")
 			os.Exit(1)

@@ -11,6 +11,11 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+const (
+	APPLY  = "apply"
+	REMOVE = "remove"
+)
+
 // Repo sane repo
 type Repo struct {
 	User   string   `json:"user"`

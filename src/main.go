@@ -146,7 +146,7 @@ func main() {
 		fmt.Println("😊  New config ready to use!")
 	case "purge":
 		cfg = repos.Purge(repo, home, cfg)
-		fmt.Println("😬  Config succesfully removed!")
+		fmt.Println("😬  Config successfully removed!")
 		config.Write(cfg)
 	case "start":
 		cfg = repos.AutoPull(cfg, repo, home)
@@ -158,11 +158,11 @@ func main() {
 	case "apply":
 		cfg = repos.AutoPull(cfg, repo, home)
 		fmt.Println("✍️  ​Applying config " + args[1] + "...")
-		launch.Do(repo, home, cfg, "apply")
+		launch.Do(repo, home, cfg, config.APPLY)
 	case "remove":
 		cfg = repos.AutoPull(cfg, repo, home)
 		fmt.Println("💣  Removing config... ")
-		launch.Do(repo, home, cfg, "remove")
+		launch.Do(repo, home, cfg, config.REMOVE)
 	case "alias":
 		fmt.Println("🤫  Aliasing " + args[1] + " to " + args[2])
 		cfg.Aliases[args[2]] = args[1]
