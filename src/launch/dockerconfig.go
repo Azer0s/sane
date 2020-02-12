@@ -1,5 +1,6 @@
 package launch
 
+//DockerConfig the docker run configuration
 type DockerConfig struct {
 	Name        string
 	Deamon      bool
@@ -13,11 +14,13 @@ type DockerConfig struct {
 	Stop        int
 }
 
+//EnvironmentPair a k-v pair for an environment variable
 type EnvironmentPair struct {
 	Key   string
 	Value string
 }
 
+//PortMapping a k-v pair for an docker port mapping
 type PortMapping struct {
 	Source int
 	Target int

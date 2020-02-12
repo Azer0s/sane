@@ -33,7 +33,6 @@ Commands:
 
   apply <config>	Applies a configuration specified by a sanefile.
   remove <config>	Removes a configuration specified by a sanefile.
-  backup <config> <ext> Backs up config files by copying and appending an extension.
 
   list        		Lists available configs.
   aliases       	Lists all aliases.
@@ -159,11 +158,11 @@ func main() {
 	case "apply":
 		cfg = repos.AutoPull(cfg, repo, home)
 		fmt.Println("✍️  ​Applying config " + args[1] + "...")
-		launch.Apply(repo, home, cfg)
+		launch.Do(repo, home, cfg, "apply")
 	case "remove":
+		cfg = repos.AutoPull(cfg, repo, home)
 		fmt.Println("💣  Removing config... ")
-	case "backup":
-		fmt.Println("🔏️  Backing up config " + args[1] + "...")
+		launch.Do(repo, home, cfg, "remove")
 	case "alias":
 		fmt.Println("🤫  Aliasing " + args[1] + " to " + args[2])
 		cfg.Aliases[args[2]] = args[1]
