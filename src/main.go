@@ -15,7 +15,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-var versionStr = "sane version 0.0.1"
+var versionStr = "sane version 1.0.0"
 var helpStr = `
 sane - A package manager for sane configuration
 https://github.com/Azer0s/sane
