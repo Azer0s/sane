@@ -1,4 +1,4 @@
-# sane [WIP]
+# sane
 
 A package manager for sane configurations
 
@@ -16,8 +16,20 @@ sane apply Azer0s/config/index
 sane apply vimsettings
 ```
 
+## remove settings
+
+```bash
+sane remove vimsettings
+```
+
 ## start docker containers
 
 ```bash
 sane start kafka
+```
+
+## stop docker containers
+
+```bash
+sane stop kafka
 ```
