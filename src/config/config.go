@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	APPLY  = "apply"
+	//APPLY apply constant
+	APPLY = "apply"
+	//REMOVE remove constant
 	REMOVE = "remove"
 )
 
