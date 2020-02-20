@@ -1,4 +1,4 @@
-package main
+package src
 
 import (
 	"fmt"
@@ -7,11 +7,6 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-
-	"./config"
-	"./launch"
-	repos "./repo"
-	"./util"
 )
 
 var versionStr = "sane version 1.0.0"
@@ -40,23 +35,24 @@ Commands:
   dealias <config>	Remove alias from a config.
 `
 
-func main() {
+//Cmd Starts the CLI execution.
+func Cmd() {
 	err := exec.Command("docker", "-v").Run()
-	util.CheckWithMessage(err, "🐳❌  Docker not installed!")
+	CheckWithMessage(err, "🐳❌  Docker not installed!")
 
 	err = exec.Command("docker", "info").Run()
-	util.CheckWithMessage(err, "👻❌  Docker not reachable. Is the docker deamon running?")
+	CheckWithMessage(err, "👻❌  Docker not reachable. Is the docker deamon running?")
 
 	err = exec.Command("docker-compose", "version").Run()
-	util.CheckWithMessage(err, "👷‍❌  Docker-compose not installed!")
+	CheckWithMessage(err, "👷‍❌  Docker-compose not installed!")
 
-	config.CheckSaneDir()
+	CheckSaneDir()
 
 	args := os.Args[1:]
-	cfg := config.Read()
+	cfg := ReadConfig()
 
 	home, err := homedir.Dir()
-	util.Check(err)
+	Check(err)
 
 	home = path.Join(home, "./.sane/")
 
@@ -79,7 +75,7 @@ func main() {
 
 		case "list":
 			for _, repo := range cfg.Repos {
-				topics := repos.GetTopics(repo.Topics)
+				topics := GetTopicEmojis(repo.Topics)
 
 				branch := ""
 
@@ -105,7 +101,7 @@ func main() {
 
 		case "rmaliases":
 			cfg.Aliases = make(map[string]string)
-			config.Write(cfg)
+			WriteConfig(cfg)
 
 		default:
 			fmt.Println("🤷 ❌ Command unrecognized!‍")
@@ -116,56 +112,56 @@ func main() {
 		os.Exit(0)
 	}
 
-	var repo config.Repo
+	var repo Repo
 
 	if regexp.MustCompile(`^[\w-]+$`).MatchString(args[1]) {
 		if val, ok := cfg.Aliases[args[1]]; ok {
-			repo = repos.GetRepoFromString(val)
+			repo = GetRepoFromString(val)
 		} else {
 			fmt.Println("🤫 ❌  Alias " + args[1] + " not found!")
 			os.Exit(1)
 		}
 	} else {
-		repo = repos.GetRepoFromString(args[1])
+		repo = GetRepoFromString(args[1])
 	}
 
 	switch command {
 	case "get":
-		cfg = repos.Pull(repo, home, cfg)
+		cfg = PullRepo(repo, home, cfg)
 		fmt.Println("😊  New config ready to use!")
 	case "purge":
-		cfg = repos.Purge(repo, home, cfg)
+		cfg = PurgeRepo(repo, home, cfg)
 		fmt.Println("😬  Config successfully removed!")
-		config.Write(cfg)
+		WriteConfig(cfg)
 	case "start":
-		cfg = repos.AutoPull(cfg, repo, home)
+		cfg = AutoPullRepo(cfg, repo, home)
 		fmt.Println("🚀  Starting " + args[1] + "...")
-		launch.Start(repo, home)
+		StartConfig(repo, home)
 	case "stop":
 		fmt.Println("✋  Stopping " + args[1] + "...")
-		launch.Stop(repo, home)
+		StopConfig(repo, home)
 	case "apply":
-		cfg = repos.AutoPull(cfg, repo, home)
+		cfg = AutoPullRepo(cfg, repo, home)
 		fmt.Println("✍️  ​Applying config " + args[1] + "...")
-		launch.Do(repo, home, cfg, config.APPLY)
+		DoConfig(repo, home, cfg, APPLY)
 	case "remove":
-		cfg = repos.AutoPull(cfg, repo, home)
+		cfg = AutoPullRepo(cfg, repo, home)
 		fmt.Println("💣  Removing config... ")
-		launch.Do(repo, home, cfg, config.REMOVE)
+		DoConfig(repo, home, cfg, REMOVE)
 	case "alias":
 		fmt.Println("🤫  Aliasing " + args[1] + " to " + args[2])
 		cfg.Aliases[args[2]] = args[1]
-		config.Write(cfg)
+		WriteConfig(cfg)
 	case "dealias":
 		fmt.Println("👀  Removing alias to " + args[1])
 
-		keys := config.Mapkeys(cfg.Aliases, args[1])
+		keys := Mapkeys(cfg.Aliases, args[1])
 
 		for _, key := range keys {
 			delete(cfg.Aliases, key)
 		}
 
-		config.Write(cfg)
+		WriteConfig(cfg)
 	}
 
 	os.Exit(0)

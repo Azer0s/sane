@@ -1,18 +1,14 @@
-package repo
+package src
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"regexp"
-
-	"../config"
-	"../util"
 )
 
 //TopicMap a list of topics and corresponding emojis
@@ -35,10 +31,10 @@ var TopicMap = map[string]string{
 	"json":      "J👶",
 }
 
-var repoExp = regexp.MustCompile(`^(?P<User>\w+)\/(?P<Name>\w+)((\/(?P<Branch>[\w\/\-_]+))?|(@(?P<Tag>[\w\.]+))?)$`)
+var repoExp = regexp.MustCompile(`^(?P<User>\w+)/(?P<Name>\w+)((/(?P<Branch>[\w/\-_]+))?|(@(?P<Tag>[\w.]+))?)$`)
 
 //GetRepoFromString get repo config from string
-func GetRepoFromString(configString string) config.Repo {
+func GetRepoFromString(configString string) Repo {
 	match := repoExp.FindStringSubmatch(configString)
 
 	if match == nil {
@@ -54,7 +50,7 @@ func GetRepoFromString(configString string) config.Repo {
 		}
 	}
 
-	var tag, branch string = "", ""
+	var tag, branch = "", ""
 
 	if val, ok := result["Tag"]; ok && val != "" {
 		tag = val
@@ -64,7 +60,7 @@ func GetRepoFromString(configString string) config.Repo {
 		branch = val
 	}
 
-	return config.Repo{
+	return Repo{
 		User:   result["User"],
 		Name:   result["Name"],
 		Branch: branch,
@@ -72,8 +68,8 @@ func GetRepoFromString(configString string) config.Repo {
 	}
 }
 
-//GetTopics get string representation of Repo topics
-func GetTopics(topics []string) string {
+//GetTopicEmojis get emoji representation of Repo topics
+func GetTopicEmojis(topics []string) string {
 	topicstr := ""
 	for _, topic := range topics {
 		if val, ok := TopicMap[topic]; ok {
@@ -96,17 +92,17 @@ func getTopicsForRepo(user, name string) []string {
 	req.Header.Add("Accept", "application/vnd.github.mercy-preview+json")
 
 	resp, err := client.Do(req)
-	util.Check(err)
+	Check(err)
 
 	b, _ := ioutil.ReadAll(resp.Body)
 	var ghResultStruct GhResult
-	json.Unmarshal(b, &ghResultStruct)
+	_ = json.Unmarshal(b, &ghResultStruct)
 
 	return ghResultStruct.Names
 }
 
-//Pull a repo from Gh
-func Pull(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfig {
+//PullRepo pull a repo from Gh
+func PullRepo(repo Repo, home string, cfg SaneConfig) SaneConfig {
 	var cmd = exec.Command("git", "clone", "https://github.com/"+repo.User+"/"+repo.Name+".git")
 
 	if repo.Tag != "" {
@@ -119,29 +115,29 @@ func Pull(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfi
 		}
 	}
 
-	target := path.Join(home, GetFolder(repo))
+	target := path.Join(home, GetRepoFolder(repo))
 
 	if _, err := os.Stat(target); !os.IsNotExist(err) {
-		cfg = Purge(repo, home, cfg)
+		cfg = PurgeRepo(repo, home, cfg)
 	}
 
 	cmd.Args = append(cmd.Args, target)
 
 	fmt.Println("🌍  Downloading repo...")
 	err := cmd.Run()
-	util.Check(err)
+	Check(err)
 
 	repo.Topics = getTopicsForRepo(repo.User, repo.Name)
 	cfg.Repos = append(cfg.Repos, repo)
 
 	fmt.Println("📝  Registering new config...")
-	config.Write(cfg)
+	WriteConfig(cfg)
 
 	return cfg
 }
 
-//GetFolder get the folder of a config
-func GetFolder(repo config.Repo) string {
+//GetRepoFolder get the folder of a config
+func GetRepoFolder(repo Repo) string {
 	target := "./" + repo.User + "_" + repo.Name
 
 	if repo.Tag != "" {
@@ -155,26 +151,26 @@ func GetFolder(repo config.Repo) string {
 	return target
 }
 
-//Purge a repo
-func Purge(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfig {
-	target := path.Join(home, GetFolder(repo))
+//PurgeRepo purge a repo
+func PurgeRepo(repo Repo, home string, cfg SaneConfig) SaneConfig {
+	target := path.Join(home, GetRepoFolder(repo))
 
 	fmt.Println("🗑  ​Purging repo...")
-	exec.Command("rm", "-rf", target).Run()
+	_ = exec.Command("rm", "-rf", target).Run()
 
-	if config.Contains(cfg.Repos, repo) {
-		i := config.IndexOf(cfg.Repos, repo)
+	if Contains(cfg.Repos, repo) {
+		i := IndexOf(cfg.Repos, repo)
 		cfg.Repos = append(cfg.Repos[:i], cfg.Repos[i+1:]...)
 	}
 
 	return cfg
 }
 
-//AutoPull pulls if not exists
-func AutoPull(cfg config.SaneConfig, repo config.Repo, home string) config.SaneConfig {
-	if !config.Contains(cfg.Repos, repo) {
+//AutoPullRepo pulls if not exists
+func AutoPullRepo(cfg SaneConfig, repo Repo, home string) SaneConfig {
+	if !Contains(cfg.Repos, repo) {
 		fmt.Println("🤷‍  Config missing, pulling automatically...")
-		cfg = Pull(repo, home, cfg)
+		cfg = PullRepo(repo, home, cfg)
 	}
 
 	return cfg

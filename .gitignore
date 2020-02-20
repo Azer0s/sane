@@ -17,3 +17,5 @@
 bin/
 
 .idea/
+
+*.sum

@@ -1,4 +1,4 @@
-package launch
+package src
 
 //DockerConfig the docker run configuration
 type DockerConfig struct {

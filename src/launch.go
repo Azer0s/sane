@@ -1,9 +1,9 @@
-package launch
+package src
 
 import (
 	"errors"
 	"fmt"
-	"github.com/docker/docker/pkg/fileutils"
+	"github.com/hacdias/fileutils"
 	"io/ioutil"
 	"math"
 	"os"
@@ -14,14 +14,11 @@ import (
 	"strconv"
 	"strings"
 
-	"../config"
-	repos "../repo"
-	"../util"
 	"gopkg.in/yaml.v2"
 )
 
-func hasSaneYml(repo config.Repo, home string) string {
-	target := path.Join(home, repos.GetFolder(repo), "sane.yml")
+func hasSaneYml(repo Repo, home string) string {
+	target := path.Join(home, GetRepoFolder(repo), "sane.yml")
 
 	if _, err := os.Stat(target); os.IsNotExist(err) {
 		fmt.Println("😐  Couldn't find sane.yml in " + target)
@@ -31,9 +28,9 @@ func hasSaneYml(repo config.Repo, home string) string {
 	return target
 }
 
-func startDockerCompose(m map[string]interface{}, repo config.Repo, home string) {
+func startDockerCompose(m map[string]interface{}, repo Repo, home string) {
 	if file, ok := m["file"]; ok {
-		dockerComposeFile := path.Join(home, repos.GetFolder(repo), file.(string))
+		dockerComposeFile := path.Join(home, GetRepoFolder(repo), file.(string))
 
 		cmd := exec.Command("docker-compose", "-f", dockerComposeFile, "up")
 
@@ -51,7 +48,7 @@ func startDockerCompose(m map[string]interface{}, repo config.Repo, home string)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		cmd.Run()
+		_ = cmd.Run()
 	} else {
 		fmt.Println("❌  Docker compose file not set!")
 		os.Exit(1)
@@ -115,8 +112,8 @@ func startDocker(m map[string]interface{}) {
 		if err != nil {
 			fmt.Println("❌  There was an error while starting the container! Rolling back...")
 			for _, s := range started {
-				exec.Command("docker", "stop", s.Name).Run()
-				exec.Command("docker", "rm", s.Name).Run()
+				_ = exec.Command("docker", "stop", s.Name).Run()
+				_ = exec.Command("docker", "rm", s.Name).Run()
 			}
 			os.Exit(1)
 		}
@@ -177,7 +174,7 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 		if image, ok := vals["image"]; ok {
 			cfg.Image = image.(string)
 		} else {
-			util.CheckCouldntParse(errors.New(""), "Image not specified ("+cfg.Name+")!")
+			CheckCouldntParse(errors.New(""), "Image not specified ("+cfg.Name+")!")
 		}
 
 		if start, ok := vals["start"]; ok {
@@ -203,10 +200,10 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 			for _, v := range port.([]interface{}) {
 				ports := strings.Split(v.(string), ":")
 				source, err := strconv.Atoi(ports[0])
-				util.CheckCouldntParse(err, "")
+				CheckCouldntParse(err, "")
 
 				target, err := strconv.Atoi(ports[1])
-				util.CheckCouldntParse(err, "")
+				CheckCouldntParse(err, "")
 
 				cfg.Ports = append(cfg.Ports, PortMapping{
 					Source: source,
@@ -221,13 +218,13 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 	return dockerConfigs
 }
 
-//Start start a container or a docker compose file
-func Start(repo config.Repo, home string) {
+//StartConfig start a container or a docker compose file
+func StartConfig(repo Repo, home string) {
 	target := hasSaneYml(repo, home)
 	b, _ := ioutil.ReadFile(target)
 	m := make(map[string]interface{})
 	err := yaml.Unmarshal(b, &m)
-	util.CheckCouldntParse(err, "")
+	CheckCouldntParse(err, "")
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
@@ -245,13 +242,13 @@ func Start(repo config.Repo, home string) {
 	}
 }
 
-//Stop stop a container
-func Stop(repo config.Repo, home string) {
+//StopConfig stop a container
+func StopConfig(repo Repo, home string) {
 	target := hasSaneYml(repo, home)
 	b, _ := ioutil.ReadFile(target)
 	m := make(map[string]interface{})
 	err := yaml.Unmarshal(b, &m)
-	util.CheckCouldntParse(err, "")
+	CheckCouldntParse(err, "")
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
@@ -283,16 +280,16 @@ func extractFileConfig(m map[string]interface{}) map[string]string {
 	return fileMap
 }
 
-func applyConfig(m map[string]interface{}, repo config.Repo, home string) {
+func applyConfig(m map[string]interface{}, repo Repo, home string) {
 	files := extractFileConfig(m)
 	for src, dst := range files {
 		err := os.Rename(dst, dst+".backup")
-		util.CheckWithMessage(err, "❌  There was an error while moving a file!")
+		CheckWithMessage(err, "❌  There was an error while moving a file!")
 
-		target := path.Join(home, repos.GetFolder(repo), src)
+		target := path.Join(home, GetRepoFolder(repo), src)
 
-		_, err = fileutils.CopyFile(target, dst)
-		util.CheckWithMessage(err, "❌  There was an error while moving a file!")
+		err = fileutils.CopyFile(target, dst)
+		CheckWithMessage(err, "❌  There was an error while moving a file!")
 	}
 }
 
@@ -300,14 +297,14 @@ func removeConfig(m map[string]interface{}) {
 	files := extractFileConfig(m)
 	for _, dst := range files {
 		err := os.Remove(dst)
-		util.CheckWithMessage(err, "❌  There was an error while deleting a file!")
+		CheckWithMessage(err, "❌  There was an error while deleting a file!")
 
 		err = os.Rename(dst+".backup", dst)
-		util.CheckWithMessage(err, "❌  There was an error while moving a file!")
+		CheckWithMessage(err, "❌  There was an error while moving a file!")
 	}
 }
 
-func applyAliases(m map[string]interface{}, cfg config.SaneConfig) {
+func applyAliases(m map[string]interface{}, cfg SaneConfig) {
 	if aliases, ok := m["aliases"]; ok {
 		for _, v := range aliases.([]interface{}) {
 			for k, v1 := range v.(map[interface{}]interface{}) {
@@ -316,14 +313,14 @@ func applyAliases(m map[string]interface{}, cfg config.SaneConfig) {
 		}
 
 		fmt.Println("🎭  Writing aliases...")
-		config.Write(cfg)
+		WriteConfig(cfg)
 	} else {
 		fmt.Println("❌  Aliases not found!")
 		os.Exit(1)
 	}
 }
 
-func removeAliases(m map[string]interface{}, cfg config.SaneConfig) {
+func removeAliases(m map[string]interface{}, cfg SaneConfig) {
 	if aliases, ok := m["aliases"]; ok {
 		for _, v := range aliases.([]interface{}) {
 			for k := range v.(map[interface{}]interface{}) {
@@ -332,37 +329,37 @@ func removeAliases(m map[string]interface{}, cfg config.SaneConfig) {
 		}
 
 		fmt.Println("🎭  Writing aliases...")
-		config.Write(cfg)
+		WriteConfig(cfg)
 	} else {
 		fmt.Println("❌  Aliases not found!")
 		os.Exit(1)
 	}
 }
 
-func doConfig(mode string, m map[string]interface{}, repo config.Repo, home string) {
-	if mode == config.APPLY {
+func doConfig(mode string, m map[string]interface{}, repo Repo, home string) {
+	if mode == APPLY {
 		applyConfig(m, repo, home)
 	} else {
 		removeConfig(m)
 	}
 }
 
-func doAliases(mode string, m map[string]interface{}, cfg config.SaneConfig) {
-	if mode == config.APPLY {
+func doAliases(mode string, m map[string]interface{}, cfg SaneConfig) {
+	if mode == APPLY {
 		applyAliases(m, cfg)
 	} else {
 		removeAliases(m, cfg)
 	}
 }
 
-//Do apply/remove a config or a list of aliases
-func Do(repo config.Repo, home string, cfg config.SaneConfig, mode string) {
+//DoConfig apply/remove a config or a list of aliases
+func DoConfig(repo Repo, home string, cfg SaneConfig, mode string) {
 	target := hasSaneYml(repo, home)
 	b, _ := ioutil.ReadFile(target)
 	m := make(map[string]interface{})
 
 	err := yaml.Unmarshal(b, &m)
-	util.CheckCouldntParse(err, "")
+	CheckCouldntParse(err, "")
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
