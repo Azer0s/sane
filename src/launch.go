@@ -55,6 +55,12 @@ func startDockerCompose(m map[string]interface{}, repo Repo, home string) {
 	}
 }
 
+func checkDebugCmd(cmd *exec.Cmd) {
+	if _, isSet := os.LookupEnv("SANE_DEBUG"); isSet {
+		cmd.Stderr = os.Stderr
+	}
+}
+
 func startDocker(m map[string]interface{}) {
 	configs := extractDockerConfig(m)
 
@@ -91,7 +97,12 @@ func startDocker(m map[string]interface{}) {
 
 		for _, port := range dockerConfig.Ports {
 			cmd.Args = append(cmd.Args, "-p")
-			cmd.Args = append(cmd.Args, strconv.Itoa(port.Source)+":"+strconv.Itoa(port.Target))
+			cmd.Args = append(cmd.Args, port.Source+":"+port.Target)
+		}
+
+		for _, volume := range dockerConfig.Volumes {
+			cmd.Args = append(cmd.Args, "--volume")
+			cmd.Args = append(cmd.Args, volume.Source+":"+volume.Target)
 		}
 
 		for _, env := range dockerConfig.Environment {
@@ -105,6 +116,7 @@ func startDocker(m map[string]interface{}) {
 		}
 
 		cmd.Args = append(cmd.Args, dockerConfig.Image)
+		checkDebugCmd(cmd)
 
 		fmt.Println("🐳  Starting container '" + dockerConfig.Name + "'...")
 		err := cmd.Run()
@@ -131,8 +143,14 @@ func stopDocker(m map[string]interface{}) {
 
 	for _, dockerConfig := range configs {
 		fmt.Println("🐳  Stopping container '" + dockerConfig.Name + "'...")
-		err1 := exec.Command("docker", "stop", dockerConfig.Name).Run()
-		err2 := exec.Command("docker", "rm", dockerConfig.Name).Run()
+
+		cmd1 := exec.Command("docker", "stop", dockerConfig.Name)
+		checkDebugCmd(cmd1)
+		err1 := cmd1.Run()
+
+		cmd2 := exec.Command("docker", "rm", dockerConfig.Name)
+		checkDebugCmd(cmd2)
+		err2 := cmd2.Run()
 
 		if err1 != nil || err2 != nil {
 			fmt.Println("❌  There was an error while stopping the container!")
@@ -150,6 +168,7 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 		cfg := DockerConfig{
 			Name:        k.(string),
 			Ports:       make([]PortMapping, 0),
+			Volumes:     make([]VolumeMapping, 0),
 			Environment: make([]EnvironmentPair, 0),
 			Start:       math.MaxInt32,
 			Stop:        math.MaxInt32,
@@ -199,15 +218,21 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 		if port, ok := vals["ports"]; ok {
 			for _, v := range port.([]interface{}) {
 				ports := strings.Split(v.(string), ":")
-				source, err := strconv.Atoi(ports[0])
-				CheckCouldntParse(err, "")
-
-				target, err := strconv.Atoi(ports[1])
-				CheckCouldntParse(err, "")
 
 				cfg.Ports = append(cfg.Ports, PortMapping{
-					Source: source,
-					Target: target,
+					Source: ports[0],
+					Target: ports[1],
+				})
+			}
+		}
+
+		if port, ok := vals["volumes"]; ok {
+			for _, v := range port.([]interface{}) {
+				volumes := strings.Split(v.(string), ":")
+
+				cfg.Volumes = append(cfg.Volumes, VolumeMapping{
+					Source: os.ExpandEnv(volumes[0]),
+					Target: volumes[1],
 				})
 			}
 		}

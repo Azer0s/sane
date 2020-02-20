@@ -8,6 +8,7 @@ type DockerConfig struct {
 	Ipc         string
 	Pid         string
 	Ports       []PortMapping
+	Volumes     []VolumeMapping
 	Environment []EnvironmentPair
 	Image       string
 	Start       int
@@ -22,6 +23,12 @@ type EnvironmentPair struct {
 
 //PortMapping a k-v pair for an docker port mapping
 type PortMapping struct {
-	Source int
-	Target int
+	Source string
+	Target string
+}
+
+//VolumeMapping a k-v pair for an docker volume mapping
+type VolumeMapping struct {
+	Source string
+	Target string
 }
