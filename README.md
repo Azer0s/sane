@@ -4,6 +4,12 @@
 
 A package manager for sane configurations
 
+## install
+
+```bash
+go get -u github.com/Azer0s/sane
+```
+
 ## apply package list
 
 `sane` supports aliasing. By pulling a list of aliases, one doesn't need to type out the full name of the repo.
