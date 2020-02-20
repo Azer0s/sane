@@ -11,7 +11,8 @@ import (
 	"path"
 	"regexp"
 
-	config "../config"
+	"../config"
+	"../util"
 )
 
 //TopicMap a list of topics and corresponding emojis
@@ -95,9 +96,7 @@ func getTopicsForRepo(user, name string) []string {
 	req.Header.Add("Accept", "application/vnd.github.mercy-preview+json")
 
 	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.Check(err)
 
 	b, _ := ioutil.ReadAll(resp.Body)
 	var ghResultStruct GhResult
@@ -130,10 +129,7 @@ func Pull(repo config.Repo, home string, cfg config.SaneConfig) config.SaneConfi
 
 	fmt.Println("🌍  Downloading repo...")
 	err := cmd.Run()
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.Check(err)
 
 	repo.Topics = getTopicsForRepo(repo.User, repo.Name)
 	cfg.Repos = append(cfg.Repos, repo)

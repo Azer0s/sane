@@ -2,17 +2,16 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"github.com/mitchellh/go-homedir"
 	"os"
 	"os/exec"
 	"path"
 	"regexp"
 
-	config "./config"
-	launch "./launch"
+	"./config"
+	"./launch"
 	repos "./repo"
-
-	"github.com/mitchellh/go-homedir"
+	"./util"
 )
 
 var versionStr = "sane version 1.0.0"
@@ -43,31 +42,21 @@ Commands:
 
 func main() {
 	err := exec.Command("docker", "-v").Run()
-	if err != nil {
-		fmt.Println("🐳❌  Docker not installed!")
-		os.Exit(1)
-	}
+	util.CheckWithMessage(err, "🐳❌  Docker not installed!")
 
 	err = exec.Command("docker", "info").Run()
-	if err != nil {
-		fmt.Println("👻❌  Docker not reachable. Is the docker deamon running?")
-		os.Exit(1)
-	}
+	util.CheckWithMessage(err, "👻❌  Docker not reachable. Is the docker deamon running?")
 
 	err = exec.Command("docker-compose", "version").Run()
-	if err != nil {
-		fmt.Println("👷‍❌  Docker-compose not installed!")
-		os.Exit(1)
-	}
+	util.CheckWithMessage(err, "👷‍❌  Docker-compose not installed!")
+
+	config.CheckSaneDir()
 
 	args := os.Args[1:]
 	cfg := config.Read()
 
 	home, err := homedir.Dir()
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.Check(err)
 
 	home = path.Join(home, "./.sane/")
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"../util"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -65,28 +66,38 @@ func Mapkeys(m map[string]string, value string) []string {
 	return keys
 }
 
+//CheckSaneDir Checks if the .sane directory exists. Creates it if it doesn't.
+func CheckSaneDir() {
+	home, err := homedir.Dir()
+	util.Check(err)
+
+	home = path.Join(home, "./.sane/")
+
+	if _, err := os.Stat(home); os.IsNotExist(err) {
+		// $HOME/.sane does not exist
+		err := os.Mkdir(home, 777)
+		util.Check(err)
+
+		template := []byte("{\"repos\":[],\"aliases\":{}}")
+		err = ioutil.WriteFile(path.Join(home, "./config.json"), template, 777)
+		util.Check(err)
+	}
+}
+
 //Read the config
 func Read() SaneConfig {
 	home, err := homedir.Dir()
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.Check(err)
 
 	repoFile := path.Join(home, "./.sane/config.json")
 
 	var cfgStruct SaneConfig
 
 	b, err := ioutil.ReadFile(repoFile)
-	if err != nil {
-		fmt.Println("📭  Config file doesn't exist!")
-		os.Exit(1)
-	}
+	util.CheckWithMessage(err, "📭  Config file doesn't exist!")
 
 	err = json.Unmarshal(b, &cfgStruct)
-	if err != nil {
-		fmt.Println("😕  Invalid config file!")
-		os.Exit(1)
-	}
+	util.CheckWithMessage(err, "😕  Invalid config file!")
 
 	return cfgStruct
 }
@@ -94,10 +105,7 @@ func Read() SaneConfig {
 //Write the config
 func Write(config SaneConfig) {
 	home, err := homedir.Dir()
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.Check(err)
 
 	repoFile := path.Join(home, "./.sane/config.json")
 
@@ -106,12 +114,8 @@ func Write(config SaneConfig) {
 	f.Close()
 
 	b, err := json.Marshal(config)
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.Check(err)
 
 	err = ioutil.WriteFile(repoFile, b, os.ModePerm)
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.Check(err)
 }

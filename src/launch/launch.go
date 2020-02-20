@@ -1,6 +1,7 @@
 package launch
 
 import (
+	"errors"
 	"fmt"
 	"github.com/docker/docker/pkg/fileutils"
 	"io/ioutil"
@@ -13,8 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	config "../config"
+	"../config"
 	repos "../repo"
+	"../util"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,11 +29,6 @@ func hasSaneYml(repo config.Repo, home string) string {
 	}
 
 	return target
-}
-
-func couldntParse(info string) {
-	fmt.Println("❌  Couldn't parse config! " + info)
-	os.Exit(1)
 }
 
 func startDockerCompose(m map[string]interface{}, repo config.Repo, home string) {
@@ -180,7 +177,7 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 		if image, ok := vals["image"]; ok {
 			cfg.Image = image.(string)
 		} else {
-			couldntParse("Image not specified (" + cfg.Name + ")!")
+			util.CheckCouldntParse(errors.New(""), "Image not specified ("+cfg.Name+")!")
 		}
 
 		if start, ok := vals["start"]; ok {
@@ -206,15 +203,10 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 			for _, v := range port.([]interface{}) {
 				ports := strings.Split(v.(string), ":")
 				source, err := strconv.Atoi(ports[0])
-				if err != nil {
-					couldntParse("")
-				}
+				util.CheckCouldntParse(err, "")
 
 				target, err := strconv.Atoi(ports[1])
-
-				if err != nil {
-					couldntParse("")
-				}
+				util.CheckCouldntParse(err, "")
 
 				cfg.Ports = append(cfg.Ports, PortMapping{
 					Source: source,
@@ -235,10 +227,7 @@ func Start(repo config.Repo, home string) {
 	b, _ := ioutil.ReadFile(target)
 	m := make(map[string]interface{})
 	err := yaml.Unmarshal(b, &m)
-
-	if err != nil {
-		couldntParse("")
-	}
+	util.CheckCouldntParse(err, "")
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
@@ -262,10 +251,7 @@ func Stop(repo config.Repo, home string) {
 	b, _ := ioutil.ReadFile(target)
 	m := make(map[string]interface{})
 	err := yaml.Unmarshal(b, &m)
-
-	if err != nil {
-		couldntParse("")
-	}
+	util.CheckCouldntParse(err, "")
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
@@ -301,19 +287,12 @@ func applyConfig(m map[string]interface{}, repo config.Repo, home string) {
 	files := extractFileConfig(m)
 	for src, dst := range files {
 		err := os.Rename(dst, dst+".backup")
-
-		if err != nil {
-			fmt.Println("❌  There was an error while moving a file!")
-			os.Exit(1)
-		}
+		util.CheckWithMessage(err, "❌  There was an error while moving a file!")
 
 		target := path.Join(home, repos.GetFolder(repo), src)
 
 		_, err = fileutils.CopyFile(target, dst)
-		if err != nil {
-			fmt.Println("❌  There was an error while moving a file!")
-			os.Exit(1)
-		}
+		util.CheckWithMessage(err, "❌  There was an error while moving a file!")
 	}
 }
 
@@ -321,16 +300,10 @@ func removeConfig(m map[string]interface{}) {
 	files := extractFileConfig(m)
 	for _, dst := range files {
 		err := os.Remove(dst)
+		util.CheckWithMessage(err, "❌  There was an error while deleting a file!")
 
-		if err != nil {
-			fmt.Println("❌  There was an error while deleting a file!")
-			os.Exit(1)
-		}
 		err = os.Rename(dst+".backup", dst)
-		if err != nil {
-			fmt.Println("❌  There was an error while moving a file!")
-			os.Exit(1)
-		}
+		util.CheckWithMessage(err, "❌  There was an error while moving a file!")
 	}
 }
 
@@ -389,10 +362,7 @@ func Do(repo config.Repo, home string, cfg config.SaneConfig, mode string) {
 	m := make(map[string]interface{})
 
 	err := yaml.Unmarshal(b, &m)
-
-	if err != nil {
-		couldntParse("")
-	}
+	util.CheckCouldntParse(err, "")
 
 	if val, ok := m["mode"]; ok {
 		switch val.(string) {
