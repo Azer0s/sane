@@ -4,6 +4,7 @@ package src
 type DockerConfig struct {
 	Name        string
 	Deamon      bool
+	Interactive bool
 	Net         string
 	Ipc         string
 	Pid         string

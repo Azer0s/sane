@@ -105,6 +105,13 @@ func startDocker(m map[string]interface{}) {
 			cmd.Args = append(cmd.Args, volume.Source+":"+volume.Target)
 		}
 
+		if dockerConfig.Interactive {
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			cmd.Stdin = os.Stdin
+			cmd.Args = append(cmd.Args, "-it")
+		}
+
 		for _, env := range dockerConfig.Environment {
 			cmd.Args = append(cmd.Args, "--env")
 
@@ -176,6 +183,10 @@ func extractDockerConfig(m map[string]interface{}) []DockerConfig {
 
 		if deamon, ok := vals["deamon"]; ok {
 			cfg.Deamon = deamon.(bool)
+		}
+
+		if interactive, ok := vals["interactive"]; ok {
+			cfg.Interactive = interactive.(bool)
 		}
 
 		if net, ok := vals["net"]; ok {
